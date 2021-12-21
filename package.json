@@ -1,4 +1,4 @@
-{
+l
   "name": "@thankthemaker/vesc-protocol",
   "version": "0.9.4",
   "description": "A Javascript / TypeScript library to create and parse VESC packages",
@@ -23,7 +23,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://https://github.com/thankthemaker/vesc-protocol-js"
+    "url": "https://https://github.com/thankthemaker/vesc-protocol"
   },
   "devDependencies": {
     "@babel/cli": "^7.16.0",
