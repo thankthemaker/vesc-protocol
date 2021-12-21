@@ -23,7 +23,7 @@ l
   ],
   "repository": {
     "type": "git",
-    "url": "https://https://github.com/thankthemaker/vesc-protocol"
+    "url": "https://github.com/thankthemaker/vesc-protocol"
   },
   "devDependencies": {
     "@babel/cli": "^7.16.0",
