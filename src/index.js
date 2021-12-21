@@ -1,4 +1,10 @@
-const crc16 = require('./crc16');
+import crc16 from './crc16';
+import VescBuffer from './vescBuffer';
+// import VescPacketParser from './vescPacketParser';
+// import VescProtocolParser from './vescProtocolParser';
+import VescMessageHandler from './vescMessageHandler';
+import VescMessageParser from './vescMessageParser';
+import generatePacket from './vescMessageGenerator';
 
 const packetTypes = {
   COMM_FW_VERSION: 0,
@@ -99,9 +105,15 @@ const notRequiredResponsePacket = [
   packetTypes.COMM_CUSTOM_APP_DATA,
 ];
 
-module.exports = {
+export {
   packetTypes,
   packerTypeToString,
   notRequiredResponsePacket,
   crc16,
+  VescBuffer,
+  // VescPacketParser,
+  // VescProtocolParser,
+  VescMessageHandler,
+  VescMessageParser,
+  generatePacket,
 };

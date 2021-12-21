@@ -34,7 +34,7 @@ const crc16Table = [
 /**
  * @param {Buffer} buffer
  */
-module.exports = function crc16(buffer) {
+export default function crc16(buffer) {
   let checksum = 0;
 
   for (const byte of buffer) {
@@ -44,4 +44,4 @@ module.exports = function crc16(buffer) {
   }
 
   return checksum;
-};
+}

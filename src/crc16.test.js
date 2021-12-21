@@ -1,4 +1,4 @@
-const crc16 = require('./crc16');
+import crc16 from './crc16';
 
 const payload = '020100000003';
 const expectedSum = 31731;
