@@ -1,4 +1,4 @@
-l
+{
   "name": "@thankthemaker/vesc-protocol",
   "version": "0.9.4",
   "description": "A Javascript / TypeScript library to create and parse VESC packages",
