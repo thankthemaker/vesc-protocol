@@ -2,7 +2,13 @@ import Debug from 'debug';
 import { Subject } from 'rxjs';
 import VescBuffer from './vescBuffer';
 import PacketTypes from './packetType';
-import { getFWVersion, getValues, getDecodedPPM } from './parsers';
+import {
+  getFWVersion,
+  getValues,
+  getDecodedPPM,
+  getMotorConfiguration,
+  getAppConfiguration,
+} from './parsers';
 
 const debug = Debug('vesc:VescMessageParser');
 
@@ -19,6 +25,14 @@ export default class VescMessageParser extends Subject {
       switch (message.type) {
         case PacketTypes.COMM_FW_VERSION:
           getFWVersion(buffer).then((result) => this.pushResult(packetType, result));
+          break;
+
+        case PacketTypes.COMM_GET_MCCONF:
+          getMotorConfiguration(buffer).then((result) => this.pushResult(packetType, result));
+          break;
+
+        case PacketTypes.COMM_GET_APPCONF:
+          getAppConfiguration(buffer).then((result) => this.pushResult(packetType, result));
           break;
 
         case PacketTypes.COMM_GET_VALUES:

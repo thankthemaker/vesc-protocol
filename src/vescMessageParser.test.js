@@ -29,11 +29,12 @@ describe('The VescMessageParser', () => {
       type: packetTypes.COMM_GET_VALUES,
     };
 
-    expect.assertions(5);
+    expect.assertions(6);
 
     vescMessageParser.queueMessage(payload);
     vescMessageParser.subscribe((message) => {
       expect(message.type).toBe('COMM_GET_VALUES');
+      expect(message.payload.dutyCycle).toBe(0.2);
       expect(message.payload.temp.mosfet).toBe(51.2);
       expect(message.payload.temp.motor).toBe(51.6);
       expect(message.payload.current.motor).toBe(286.72);
