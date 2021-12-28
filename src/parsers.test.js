@@ -4,6 +4,7 @@ import {
   getFWVersion,
   getValues,
   getDecodedPPM,
+  getDecodedADC,
   getStatus1,
   getStatus2,
   getStatus3,
@@ -11,10 +12,13 @@ import {
   getStatus5,
   getValuesSelective,
   getBalanceData,
+  getAppConfiguration,
+  getBmsValues,
 } from './parsers';
 import {
   MESSAGE_GET_VALUES,
   MESSAGE_GET_DECODED_PPM,
+  MESSAGE_GET_DECODED_ADC,
   MESSAGE_STATUS_1,
   MESSAGE_STATUS_2,
   MESSAGE_STATUS_3,
@@ -23,6 +27,8 @@ import {
   MESSAGE_GET_VALUES_SELECTIVE,
   MESSAGE_COMM_GET_IMU_DATA,
   MESSAGE_FW_VERSION,
+  MESSAGE_COMM_GET_APPCONF,
+  MESSAGE_COMM_BMS_GET_VALUES,
 } from './vesc-messages';
 
 describe('The parser', () => {
@@ -53,7 +59,7 @@ describe('The parser', () => {
       expect(data.current.battery).toBe(110.11);
       expect(data.id).toBe(0);
       expect(data.iq).toBe(0);
-      expect(data.dutyCycle).toBe(0);
+      expect(data.dutyCycle).toBe(0.2);
       expect(data.erpm).toBe(17999);
       expect(data.voltage).toBe(61.3);
       expect(data.ampHours.consumed).toBe(210.9952);
@@ -71,6 +77,17 @@ describe('The parser', () => {
     const buffer = new VescBuffer(payload);
     return getDecodedPPM(buffer).then((data) => {
       expect(data.decodedPPM).toBe(84.034408);
+    });
+  });
+
+  it('should return the decoded ADC', () => {
+    const payload = MESSAGE_GET_DECODED_ADC.PACKAGE;
+    const buffer = new VescBuffer(payload);
+    return getDecodedADC(buffer).then((data) => {
+      expect(data.level1).toBe(0.148328);
+      expect(data.voltage1).toBe(3.174432);
+      expect(data.level2).toBe(0.148328);
+      expect(data.voltage2).toBe(3.174432);
     });
   });
 
@@ -151,6 +168,56 @@ describe('The parser', () => {
       expect(data.switchState).toBe(0);
       expect(data.adc1).toBe(0);
       expect(data.adc2).toBe(0);
+    });
+  });
+
+  it('should return the BMS values', () => {
+    const payload = MESSAGE_COMM_BMS_GET_VALUES.PACKAGE;
+    const buffer = new VescBuffer(payload);
+    return getBmsValues(buffer).then((data) => {
+      expect(data.v_tot).toBe(48.1234);
+      expect(data.v_cell[0]).toBe(4.01);
+      expect(data.temps_adc[0]).toBe(36.27);
+      expect(data.bal_states[0]).toBe(0.1);
+      expect(data.temp_max_cell).toBe(21.18);
+    });
+  });
+
+  it('should return the app configuration', () => {
+    const payload = MESSAGE_COMM_GET_APPCONF.PACKAGE;
+    const buffer = new VescBuffer(payload);
+    return getAppConfiguration(buffer).then((data) => {
+      expect(data.signature).toBe(-1573018332);
+      expect(data.controller_id).toBe(25);
+      expect(data.timeout_msec).toBe(1000);
+      expect(data.timeout_brake_current).toBe(1);
+      expect(data.send_can_status).toBe(7);
+      expect(data.send_can_status_rate_hz).toBe(50);
+      expect(data.can_baud_rate).toBe(2);
+      expect(data.pairing_done).toBe(0);
+      expect(data.permanent_uart_enabled).toBe(1);
+      expect(data.shutdown_mode).toBe(7);
+      expect(data.can_mode).toBe(1);
+      expect(data.uavcan_esc_index).toBe(2);
+      expect(data.uavcan_raw_mode).toBe(3);
+      expect(data.app_to_use).toBe(4);
+      expect(data.app_ppm_conf.ctrl_type).toBe(0);
+      // expect(data.app_ppm_conf.pid_max_erpm).toBe(15000.0);
+      // expect(data.app_ppm_conf.pulse_start).toBe(1);
+
+      // expect(data.app_ppm_conf.median_filter).toBe(1);
+      // expect(data.app_ppm_conf.safe_start).toBe(1);
+
+      // expect(data.app_ppm_conf.throttle_exp_mode).toBe(0);
+
+      // expect(data.app_ppm_conf.tc).toBe(0);
+
+      // expect(data.app_adc_conf.use_filter).toBe(0);
+      // expect(data.app_adc_conf.safe_start).toBe(0);
+      // expect(data.app_adc_conf.cc_button_inverted).toBe(1);
+      // expect(data.app_adc_conf.rev_button_inverted).toBe(1);
+      // expect(data.app_adc_conf.voltage_inverted).toBe(0);
+      // expect(data.app_adc_conf.voltage2_inverted).toBe(0);
     });
   });
 });
