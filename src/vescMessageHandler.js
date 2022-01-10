@@ -1,6 +1,6 @@
 /* eslint no-bitwise: "off" */
 /* eslint no-restricted-syntax: "off" */
-import Debug from 'debug';
+import Debug from 'debug-es';
 import { Subject } from 'rxjs';
 import crc16 from './crc16';
 

@@ -1,4 +1,4 @@
-import Debug from 'debug';
+import Debug from 'debug-es';
 import { Subject } from 'rxjs';
 import VescBuffer from './vescBuffer';
 import PacketTypes from './packetType';
