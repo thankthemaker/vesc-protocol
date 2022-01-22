@@ -1,4 +1,4 @@
-import Debug from 'debug-es';
+import logger from 'loglevel';
 import { Subject } from 'rxjs';
 import VescBuffer from './vescBuffer';
 import PacketTypes from './packetType';
@@ -10,8 +10,6 @@ import {
   getAppConfiguration,
 } from './parsers';
 
-const debug = Debug('vesc:VescMessageParser');
-
 export default class VescMessageParser extends Subject {
   constructor() {
     super();
@@ -20,7 +18,7 @@ export default class VescMessageParser extends Subject {
       const buffer = new VescBuffer(message.payload);
       const packetType = Object.keys(PacketTypes)[message.type];
 
-      debug(`Received PacketType: "${packetType}"`);
+      logger.debug(`Received PacketType: "${packetType}"`);
 
       switch (message.type) {
         case PacketTypes.COMM_FW_VERSION:
@@ -44,13 +42,13 @@ export default class VescMessageParser extends Subject {
           break;
 
         default:
-          debug(`Unknown packet type "${message.type}"`);
+          logger.debug(`Unknown packet type "${message.type}"`);
       }
     });
   }
 
   pushResult(type, payload) {
-    debug(`pushResult: "${type}, ${JSON.stringify(payload)}"`);
+    logger.debug(`pushResult: "${type}, ${JSON.stringify(payload)}"`);
     this.next({
       type,
       payload,

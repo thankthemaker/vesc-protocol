@@ -1,5 +1,7 @@
 reports
 
+release.sh
+
 # Logs
 logs
 *.log
