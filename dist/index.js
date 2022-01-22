@@ -1,5 +1,3 @@
-import Debug from 'debug';
-
 /* eslint no-bitwise: "off" */
 
 /* eslint no-restricted-syntax: "off" */
@@ -104,6 +102,309 @@ class VescBuffer {
   }
 
 }
+
+var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+var loglevel = {exports: {}};
+
+/*
+* loglevel - https://github.com/pimterry/loglevel
+*
+* Copyright (c) 2013 Tim Perry
+* Licensed under the MIT license.
+*/
+
+(function (module) {
+(function (root, definition) {
+    if (module.exports) {
+        module.exports = definition();
+    } else {
+        root.log = definition();
+    }
+}(commonjsGlobal, function () {
+
+    // Slightly dubious tricks to cut down minimized file size
+    var noop = function() {};
+    var undefinedType = "undefined";
+    var isIE = (typeof window !== undefinedType) && (typeof window.navigator !== undefinedType) && (
+        /Trident\/|MSIE /.test(window.navigator.userAgent)
+    );
+
+    var logMethods = [
+        "trace",
+        "debug",
+        "info",
+        "warn",
+        "error"
+    ];
+
+    // Cross-browser bind equivalent that works at least back to IE6
+    function bindMethod(obj, methodName) {
+        var method = obj[methodName];
+        if (typeof method.bind === 'function') {
+            return method.bind(obj);
+        } else {
+            try {
+                return Function.prototype.bind.call(method, obj);
+            } catch (e) {
+                // Missing bind shim or IE8 + Modernizr, fallback to wrapping
+                return function() {
+                    return Function.prototype.apply.apply(method, [obj, arguments]);
+                };
+            }
+        }
+    }
+
+    // Trace() doesn't print the message in IE, so for that case we need to wrap it
+    function traceForIE() {
+        if (console.log) {
+            if (console.log.apply) {
+                console.log.apply(console, arguments);
+            } else {
+                // In old IE, native console methods themselves don't have apply().
+                Function.prototype.apply.apply(console.log, [console, arguments]);
+            }
+        }
+        if (console.trace) console.trace();
+    }
+
+    // Build the best logging method possible for this env
+    // Wherever possible we want to bind, not wrap, to preserve stack traces
+    function realMethod(methodName) {
+        if (methodName === 'debug') {
+            methodName = 'log';
+        }
+
+        if (typeof console === undefinedType) {
+            return false; // No method possible, for now - fixed later by enableLoggingWhenConsoleArrives
+        } else if (methodName === 'trace' && isIE) {
+            return traceForIE;
+        } else if (console[methodName] !== undefined) {
+            return bindMethod(console, methodName);
+        } else if (console.log !== undefined) {
+            return bindMethod(console, 'log');
+        } else {
+            return noop;
+        }
+    }
+
+    // These private functions always need `this` to be set properly
+
+    function replaceLoggingMethods(level, loggerName) {
+        /*jshint validthis:true */
+        for (var i = 0; i < logMethods.length; i++) {
+            var methodName = logMethods[i];
+            this[methodName] = (i < level) ?
+                noop :
+                this.methodFactory(methodName, level, loggerName);
+        }
+
+        // Define log.log as an alias for log.debug
+        this.log = this.debug;
+    }
+
+    // In old IE versions, the console isn't present until you first open it.
+    // We build realMethod() replacements here that regenerate logging methods
+    function enableLoggingWhenConsoleArrives(methodName, level, loggerName) {
+        return function () {
+            if (typeof console !== undefinedType) {
+                replaceLoggingMethods.call(this, level, loggerName);
+                this[methodName].apply(this, arguments);
+            }
+        };
+    }
+
+    // By default, we use closely bound real methods wherever possible, and
+    // otherwise we wait for a console to appear, and then try again.
+    function defaultMethodFactory(methodName, level, loggerName) {
+        /*jshint validthis:true */
+        return realMethod(methodName) ||
+               enableLoggingWhenConsoleArrives.apply(this, arguments);
+    }
+
+    function Logger(name, defaultLevel, factory) {
+      var self = this;
+      var currentLevel;
+      defaultLevel = defaultLevel == null ? "WARN" : defaultLevel;
+
+      var storageKey = "loglevel";
+      if (typeof name === "string") {
+        storageKey += ":" + name;
+      } else if (typeof name === "symbol") {
+        storageKey = undefined;
+      }
+
+      function persistLevelIfPossible(levelNum) {
+          var levelName = (logMethods[levelNum] || 'silent').toUpperCase();
+
+          if (typeof window === undefinedType || !storageKey) return;
+
+          // Use localStorage if available
+          try {
+              window.localStorage[storageKey] = levelName;
+              return;
+          } catch (ignore) {}
+
+          // Use session cookie as fallback
+          try {
+              window.document.cookie =
+                encodeURIComponent(storageKey) + "=" + levelName + ";";
+          } catch (ignore) {}
+      }
+
+      function getPersistedLevel() {
+          var storedLevel;
+
+          if (typeof window === undefinedType || !storageKey) return;
+
+          try {
+              storedLevel = window.localStorage[storageKey];
+          } catch (ignore) {}
+
+          // Fallback to cookies if local storage gives us nothing
+          if (typeof storedLevel === undefinedType) {
+              try {
+                  var cookie = window.document.cookie;
+                  var location = cookie.indexOf(
+                      encodeURIComponent(storageKey) + "=");
+                  if (location !== -1) {
+                      storedLevel = /^([^;]+)/.exec(cookie.slice(location))[1];
+                  }
+              } catch (ignore) {}
+          }
+
+          // If the stored level is not valid, treat it as if nothing was stored.
+          if (self.levels[storedLevel] === undefined) {
+              storedLevel = undefined;
+          }
+
+          return storedLevel;
+      }
+
+      function clearPersistedLevel() {
+          if (typeof window === undefinedType || !storageKey) return;
+
+          // Use localStorage if available
+          try {
+              window.localStorage.removeItem(storageKey);
+              return;
+          } catch (ignore) {}
+
+          // Use session cookie as fallback
+          try {
+              window.document.cookie =
+                encodeURIComponent(storageKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC";
+          } catch (ignore) {}
+      }
+
+      /*
+       *
+       * Public logger API - see https://github.com/pimterry/loglevel for details
+       *
+       */
+
+      self.name = name;
+
+      self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
+          "ERROR": 4, "SILENT": 5};
+
+      self.methodFactory = factory || defaultMethodFactory;
+
+      self.getLevel = function () {
+          return currentLevel;
+      };
+
+      self.setLevel = function (level, persist) {
+          if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
+              level = self.levels[level.toUpperCase()];
+          }
+          if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
+              currentLevel = level;
+              if (persist !== false) {  // defaults to true
+                  persistLevelIfPossible(level);
+              }
+              replaceLoggingMethods.call(self, level, name);
+              if (typeof console === undefinedType && level < self.levels.SILENT) {
+                  return "No console available for logging";
+              }
+          } else {
+              throw "log.setLevel() called with invalid level: " + level;
+          }
+      };
+
+      self.setDefaultLevel = function (level) {
+          defaultLevel = level;
+          if (!getPersistedLevel()) {
+              self.setLevel(level, false);
+          }
+      };
+
+      self.resetLevel = function () {
+          self.setLevel(defaultLevel, false);
+          clearPersistedLevel();
+      };
+
+      self.enableAll = function(persist) {
+          self.setLevel(self.levels.TRACE, persist);
+      };
+
+      self.disableAll = function(persist) {
+          self.setLevel(self.levels.SILENT, persist);
+      };
+
+      // Initialize with the right level
+      var initialLevel = getPersistedLevel();
+      if (initialLevel == null) {
+          initialLevel = defaultLevel;
+      }
+      self.setLevel(initialLevel, false);
+    }
+
+    /*
+     *
+     * Top-level API
+     *
+     */
+
+    var defaultLogger = new Logger();
+
+    var _loggersByName = {};
+    defaultLogger.getLogger = function getLogger(name) {
+        if ((typeof name !== "symbol" && typeof name !== "string") || name === "") {
+          throw new TypeError("You must supply a name when creating a logger.");
+        }
+
+        var logger = _loggersByName[name];
+        if (!logger) {
+          logger = _loggersByName[name] = new Logger(
+            name, defaultLogger.getLevel(), defaultLogger.methodFactory);
+        }
+        return logger;
+    };
+
+    // Grab the current global log variable in case of overwrite
+    var _log = (typeof window !== undefinedType) ? window.log : undefined;
+    defaultLogger.noConflict = function() {
+        if (typeof window !== undefinedType &&
+               window.log === defaultLogger) {
+            window.log = _log;
+        }
+
+        return defaultLogger;
+    };
+
+    defaultLogger.getLoggers = function getLoggers() {
+        return _loggersByName;
+    };
+
+    // ES6 default export, for compatibility
+    defaultLogger['default'] = defaultLogger;
+
+    return defaultLogger;
+}));
+}(loglevel));
+
+var logger = loglevel.exports;
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -919,7 +1220,6 @@ var AnonymousSubject = /*@__PURE__*/ (function (_super) {
 }(Subject));
 
 /* eslint no-bitwise: "off" */
-const debug$1 = Debug('vesc:VescMessageHandler');
 const PACKET_HEADER = 1;
 const PACKET_LENGTH = 2;
 const PACKET_LENGTH_SECOND = 22;
@@ -953,11 +1253,11 @@ class VescMessageHandler {
               if (this.packet.packetType === 2) {
                 this.packet.packetSize = byte;
                 this.packetState = PACKET_LENGTH;
-                debug$1(`PACKET_HEADER received short package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
+                logger.debug(`PACKET_HEADER received short package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
               } else {
                 this.packet.packetSize = byte << 8;
                 this.packetState = PACKET_LENGTH_SECOND;
-                debug$1(`PACKET_HEADER received long package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
+                logger.debug(`PACKET_HEADER received long package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
               }
 
               break;
@@ -965,7 +1265,7 @@ class VescMessageHandler {
             case PACKET_LENGTH_SECOND:
               this.packet.packetSize |= byte;
               this.packetState = PACKET_LENGTH;
-              debug$1(`PACKET_LENGTH_SECOND packetSize: ${this.packet.packetSize}`);
+              logger.debug(`PACKET_LENGTH_SECOND packetSize: ${this.packet.packetSize}`);
               break;
 
             case PACKET_LENGTH:
@@ -980,21 +1280,21 @@ class VescMessageHandler {
                 this.packetState = PACKET_PAYLOAD;
               }
 
-              debug$1(`PACKET_LENGTH position: ${this.payloadPosition}`);
+              logger.debug(`PACKET_LENGTH position: ${this.payloadPosition}`);
               break;
 
             case PACKET_PAYLOAD:
               this.packet.crc = byte << 8;
               this.packetState = PACKET_CRC_SECOND;
-              debug$1(`PACKET_PAYLOAD crc: ${this.packet.crc}, byte ${byte}`);
+              logger.debug(`PACKET_PAYLOAD crc: ${this.packet.crc}, byte ${byte}`);
               break;
 
             case PACKET_CRC_SECOND:
               this.packet.crc |= byte;
-              debug$1(`PACKET_CRC_SECOND crc: ${this.packet.crc}, byte ${byte}`);
+              logger.debug(`PACKET_CRC_SECOND crc: ${this.packet.crc}, byte ${byte}`);
 
               if (this.packet.crc !== crc16(this.packet.payload)) {
-                debug$1(`CRC "${crc16(this.packet.payload)}" doesn't match received CRC "${this.packet.crc}"`);
+                logger.debug(`CRC "${crc16(this.packet.payload)}" doesn't match received CRC "${this.packet.crc}"`);
                 this.resetState();
                 break;
               }
@@ -1004,7 +1304,7 @@ class VescMessageHandler {
 
             case PACKET_CRC:
               if (byte !== 3) {
-                debug$1(`Invalid End Packet Byte received: "${byte}"`);
+                logger.debug(`Invalid End Packet Byte received: "${byte}"`);
               } else {
                 this.vescMessageParser.queueMessage({
                   type: this.packet.payload.readUInt8(0),
@@ -1017,7 +1317,7 @@ class VescMessageHandler {
               break;
 
             default:
-              debug$1(`Should never reach this packetState "${this.packetState}`);
+              logger.debug(`Should never reach this packetState "${this.packetState}`);
           }
         } else if (byte === 2 || byte === 3) {
           this.packetStartFound = true;
@@ -1025,7 +1325,7 @@ class VescMessageHandler {
           this.packet.packetType = byte;
           this.position = 1;
         } else {
-          debug$1(`Unknown byte "${byte}" received at state "${this.packetState}"`);
+          logger.debug(`Unknown byte "${byte}" received at state "${this.packetState}"`);
         }
       }
     });
@@ -1187,8 +1487,131 @@ function getDecodedPPM(payload) {
   response.ppmLastLen = payload.readDouble32(1e6);
   return Promise.resolve(response);
 }
+/**
+ * @param {VescBuffer} payload
+ */
 
-const debug = Debug('vesc:VescMessageParser');
+function getMotorConfiguration(payload) {
+  const response = {
+    message: 'yeah',
+    payload
+  };
+  return Promise.resolve(response);
+}
+/**
+ * @param {VescBuffer} payload
+ */
+
+function getAppConfiguration(payload) {
+  const response = {
+    signature: 0,
+    controller_id: 0,
+    timeout_msec: 0.0,
+    timeout_brake_current: 0.0,
+    send_can_status: 0,
+    send_can_status_rate_hz: 0,
+    can_baud_rate: 0,
+    pairing_done: 0,
+    permanent_uart_enabled: 0,
+    shutdown_mode: 0,
+    can_mode: 0,
+    uavcan_esc_index: 0,
+    uavcan_raw_mode: 0,
+    app_to_use: 0,
+    app_ppm_conf: {
+      ctrl_type: 0,
+      pid_max_erpm: 0.0,
+      hyst: 0.0,
+      pulse_start: 0.0,
+      pulse_end: 0.0,
+      pulse_center: 0.0,
+      median_filter: 0,
+      safe_start: 0,
+      throttle_exp: 0.0,
+      throttle_exp_brake: 0.0,
+      throttle_exp_mode: 0,
+      ramp_time_pos: 0.0,
+      ramp_time_neg: 0.0,
+      multi_esc: 0,
+      tc: 0,
+      tc_max_diff: 0.0,
+      max_erpm_for_dir: 0.0,
+      smart_rev_max_duty: 0.0,
+      smart_rev_ramp_time: 0.0
+    },
+    app_adc_conf: {
+      ctrl_type: 0,
+      hyst: 0.0,
+      voltage_start: 0.0,
+      voltage_end: 0.0,
+      voltage_center: 0.0,
+      voltage2_start: 0.0,
+      voltage2_end: 0.0,
+      use_filter: 0,
+      safe_start: 0,
+      cc_button_inverted: 0,
+      rev_button_inverted: 0,
+      voltage_inverted: 0,
+      voltage2_inverted: 0,
+      throttle_exp: 0.0,
+      throttle_exp_brake: 0.0
+    },
+    app_chuk_conf: {},
+    app_nrf_conf: {},
+    app_balance_conf: {},
+    app_pas_conf: {},
+    imu_conf: {}
+  };
+  response.signature = payload.readInt32();
+  response.controller_id = payload.readInt8();
+  response.timeout_msec = payload.readInt32();
+  response.timeout_brake_current = payload.readDouble32(1e0);
+  response.send_can_status = payload.readInt8();
+  response.send_can_status_rate_hz = payload.readUInt16();
+  response.can_baud_rate = payload.readInt8();
+  response.pairing_done = payload.readInt8();
+  response.permanent_uart_enabled = payload.readInt8();
+  response.shutdown_mode = payload.readInt8();
+  response.can_mode = payload.readInt8();
+  response.uavcan_esc_index = payload.readInt8();
+  response.uavcan_raw_mode = payload.readInt8();
+  response.app_to_use = payload.readInt8();
+  response.app_ppm_conf.ctrl_type = payload.readInt8();
+  response.app_ppm_conf.pid_max_erpm = payload.readDouble32(1e2);
+  response.app_ppm_conf.hyst = payload.readDouble32(1e4);
+  response.app_ppm_conf.pulse_start = payload.readDouble32(1e4);
+  response.app_ppm_conf.pulse_end = payload.readDouble32(1e4);
+  response.app_ppm_conf.pulse_center = payload.readDouble32(1e4);
+  response.app_ppm_conf.median_filter = payload.readInt8();
+  response.app_ppm_conf.safe_start = payload.readInt8();
+  response.app_ppm_conf.throttle_exp = payload.readDouble32();
+  response.app_ppm_conf.throttle_exp_brake = payload.readDouble32();
+  response.app_ppm_conf.throttle_exp_mode = payload.readInt8();
+  response.app_ppm_conf.ramp_time_pos = payload.readDouble32();
+  response.app_ppm_conf.ramp_time_neg = payload.readDouble32();
+  response.app_ppm_conf.multi_esc = payload.readInt8();
+  response.app_ppm_conf.tc = payload.readInt8();
+  response.app_ppm_conf.tc_max_diff = payload.readDouble32();
+  response.app_ppm_conf.max_erpm_for_dir = payload.readDouble32();
+  response.app_ppm_conf.smart_rev_max_duty = payload.readDouble32();
+  response.app_ppm_conf.smart_rev_ramp_time = payload.readDouble32();
+  response.app_adc_conf.hyst = payload.readDouble32();
+  response.app_adc_conf.voltage_start = payload.readDouble32();
+  response.app_adc_conf.voltage_end = payload.readDouble32();
+  response.app_adc_conf.voltage_center = payload.readDouble32();
+  response.app_adc_conf.voltage2_start = payload.readDouble32();
+  response.app_adc_conf.voltage2_end = payload.readDouble32();
+  response.app_adc_conf.use_filter = payload.readInt8();
+  response.app_adc_conf.safe_start = payload.readInt8();
+  response.app_adc_conf.cc_button_inverted = payload.readInt8();
+  response.app_adc_conf.rev_button_inverted = payload.readInt8();
+  response.app_adc_conf.voltage_inverted = payload.readInt8();
+  response.app_adc_conf.voltage2_inverted = payload.readInt8();
+  response.app_adc_conf.throttle_exp = payload.readDouble32();
+  response.app_adc_conf.throttle_exp_brake = payload.readDouble32();
+  return Promise.resolve(response);
+}
+
 class VescMessageParser extends Subject {
   constructor() {
     super();
@@ -1196,11 +1619,19 @@ class VescMessageParser extends Subject {
     this.vescMessages.subscribe(message => {
       const buffer = new VescBuffer(message.payload);
       const packetType = Object.keys(PacketTypes)[message.type];
-      debug(`Received PacketType: "${packetType}"`);
+      logger.debug(`Received PacketType: "${packetType}"`);
 
       switch (message.type) {
         case PacketTypes.COMM_FW_VERSION:
           getFWVersion(buffer).then(result => this.pushResult(packetType, result));
+          break;
+
+        case PacketTypes.COMM_GET_MCCONF:
+          getMotorConfiguration(buffer).then(result => this.pushResult(packetType, result));
+          break;
+
+        case PacketTypes.COMM_GET_APPCONF:
+          getAppConfiguration(buffer).then(result => this.pushResult(packetType, result));
           break;
 
         case PacketTypes.COMM_GET_VALUES:
@@ -1212,13 +1643,13 @@ class VescMessageParser extends Subject {
           break;
 
         default:
-          debug(`Unknown packet type "${message.type}"`);
+          logger.debug(`Unknown packet type "${message.type}"`);
       }
     });
   }
 
   pushResult(type, payload) {
-    debug(`pushResult: "${type}, ${JSON.stringify(payload)}"`);
+    logger.debug(`pushResult: "${type}, ${JSON.stringify(payload)}"`);
     this.next({
       type,
       payload

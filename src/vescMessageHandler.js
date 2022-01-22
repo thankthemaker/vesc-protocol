@@ -1,10 +1,8 @@
 /* eslint no-bitwise: "off" */
 /* eslint no-restricted-syntax: "off" */
-import Debug from 'debug-es';
+import logger from 'loglevel';
 import { Subject } from 'rxjs';
 import crc16 from './crc16';
-
-const debug = Debug('vesc:VescMessageHandler');
 
 const PACKET_HEADER = 1;
 const PACKET_LENGTH = 2;
@@ -40,18 +38,18 @@ export default class VescMessageHandler {
               if (this.packet.packetType === 2) {
                 this.packet.packetSize = byte;
                 this.packetState = PACKET_LENGTH;
-                debug(`PACKET_HEADER received short package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
+                logger.debug(`PACKET_HEADER received short package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
               } else {
                 this.packet.packetSize = byte << 8;
                 this.packetState = PACKET_LENGTH_SECOND;
-                debug(`PACKET_HEADER received long package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
+                logger.debug(`PACKET_HEADER received long package: ${this.packet.packetType}, packetSize: ${this.packet.packetSize}`);
               }
               break;
 
             case PACKET_LENGTH_SECOND:
               this.packet.packetSize |= byte;
               this.packetState = PACKET_LENGTH;
-              debug(`PACKET_LENGTH_SECOND packetSize: ${this.packet.packetSize}`);
+              logger.debug(`PACKET_LENGTH_SECOND packetSize: ${this.packet.packetSize}`);
               break;
 
             case PACKET_LENGTH:
@@ -65,21 +63,21 @@ export default class VescMessageHandler {
               if (this.payloadPosition >= this.packet.packetSize) {
                 this.packetState = PACKET_PAYLOAD;
               }
-              debug(`PACKET_LENGTH position: ${this.payloadPosition}`);
+              logger.debug(`PACKET_LENGTH position: ${this.payloadPosition}`);
               break;
 
             case PACKET_PAYLOAD:
               this.packet.crc = byte << 8;
               this.packetState = PACKET_CRC_SECOND;
-              debug(`PACKET_PAYLOAD crc: ${this.packet.crc}, byte ${byte}`);
+              logger.debug(`PACKET_PAYLOAD crc: ${this.packet.crc}, byte ${byte}`);
               break;
 
             case PACKET_CRC_SECOND:
               this.packet.crc |= byte;
-              debug(`PACKET_CRC_SECOND crc: ${this.packet.crc}, byte ${byte}`);
+              logger.debug(`PACKET_CRC_SECOND crc: ${this.packet.crc}, byte ${byte}`);
 
               if (this.packet.crc !== crc16(this.packet.payload)) {
-                debug(`CRC "${crc16(this.packet.payload)}" doesn't match received CRC "${this.packet.crc}"`);
+                logger.debug(`CRC "${crc16(this.packet.payload)}" doesn't match received CRC "${this.packet.crc}"`);
                 this.resetState();
                 break;
               }
@@ -89,7 +87,7 @@ export default class VescMessageHandler {
 
             case PACKET_CRC:
               if (byte !== 3) {
-                debug(`Invalid End Packet Byte received: "${byte}"`);
+                logger.debug(`Invalid End Packet Byte received: "${byte}"`);
               } else {
                 this.vescMessageParser.queueMessage({
                   type: this.packet.payload.readUInt8(0),
@@ -101,7 +99,7 @@ export default class VescMessageHandler {
               this.buffer = data.slice(i + 1);
               break;
             default:
-              debug(`Should never reach this packetState "${this.packetState}`);
+              logger.debug(`Should never reach this packetState "${this.packetState}`);
           }
         } else if (byte === 2 || byte === 3) {
           this.packetStartFound = true;
@@ -109,7 +107,7 @@ export default class VescMessageHandler {
           this.packet.packetType = byte;
           this.position = 1;
         } else {
-          debug(`Unknown byte "${byte}" received at state "${this.packetState}"`);
+          logger.debug(`Unknown byte "${byte}" received at state "${this.packetState}"`);
         }
       }
     });
