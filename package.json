@@ -1,6 +1,6 @@
 {
   "name": "@thankthemaker/vesc-protocol",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "A Javascript / TypeScript library to create and parse VESC packages",
   "module": "src/index.js",
   "main": "dist/index.js",
