@@ -1,10 +1,11 @@
 import logger from 'loglevel';
 import { Subject } from 'rxjs';
 import VescBuffer from './vescBuffer';
-import PacketTypes from './packetType';
+import { PacketTypes } from './packetType';
 import {
   getFWVersion,
   getValues,
+  getValuesSetupSelective,
   getDecodedPPM,
   getMotorConfiguration,
   getAppConfiguration,
@@ -35,6 +36,10 @@ export default class VescMessageParser extends Subject {
 
         case PacketTypes.COMM_GET_VALUES:
           getValues(buffer).then((result) => this.pushResult(packetType, result));
+          break;
+
+        case PacketTypes.COMM_GET_VALUES_SETUP_SELECTIVE:
+          getValuesSetupSelective(buffer).then((result) => this.pushResult(packetType, result));
           break;
 
         case PacketTypes.COMM_GET_DECODED_PPM:

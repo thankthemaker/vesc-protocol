@@ -19,6 +19,28 @@ export const MESSAGE_FW_VERSION = {
   ])),
 };
 
+export const MESSAGE_FW_VERSION_WRONG_CRC = {
+  START: MESSAGE_FW_VERSION.START,
+  PACKAGE: MESSAGE_FW_VERSION.PACKAGE,
+  END: Buffer.from(new Uint8Array([
+    0, 0,
+    0, 0,
+    222, 0, // CRC
+    3, // package end
+  ])),
+};
+
+export const MESSAGE_FW_VERSION_WRONG_END = {
+  START: MESSAGE_FW_VERSION.START,
+  PACKAGE: MESSAGE_FW_VERSION.PACKAGE,
+  END: Buffer.from(new Uint8Array([
+    0, 0,
+    0, 0,
+    222, 50, // CRC
+    1, // package end
+  ])),
+};
+
 export const MESSAGE_GET_VALUES = {
   PACKAGE: Buffer.from(new Uint8Array([
     2, 0, // temp.mosfet
@@ -94,16 +116,31 @@ export const MESSAGE_STATUS_5 = {
   ])),
 };
 
-export const MESSAGE_GET_VALUES_SELECTIVE = {
+export const MESSAGE_GET_VALUES_SETUP_SELECTIVE = {
   PACKAGE: Buffer.from(new Uint8Array([
+    0, 1, 255, 255, // selective bitmask
     1, 167, // mosfet
     1, 56, // motor
+    0, 0, 0, 0, // current in
+    0, 0, 0, 0, // current in_total
     100, 0, // dutyCycle
     0, 0, 0, 100, // erpm
+    0, 0, 0, 0, // speed
     1, 197, // voltage
+    0, 0, // battery level
+    0, 0, 0, 0, // amp hours consumed
+    0, 0, 0, 0, // amp hours charged
+    0, 0, 0, 0, // watt hours consumed
+    0, 0, 0, 0, // watt hours charged
     0, 1, 0, 0, // tachometer.value
     0, 2, 0, 0, // tachometer.abs
+    0, 0, 0, 0, // PID pos
     1, // faultCode
+  ])),
+  PACKAGE_TEMP_ONLY: Buffer.from(new Uint8Array([
+    0, 0, 0, 3, // selective bitmask
+    1, 167, // mosfet
+    1, 56, // motor
   ])),
 };
 

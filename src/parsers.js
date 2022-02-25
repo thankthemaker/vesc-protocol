@@ -208,31 +208,96 @@ export function getStatus5(payload) {
 /**
  * @param {VescBuffer} payload
  */
-export function getValuesSelective(payload) {
+export function getValuesSetupSelective(payload) {
+/* eslint no-bitwise: ["error", { "allow": ["&", "<<"] }] */
   const response = {
+    bitmask: 0,
     temp: {
       mosfet: 0.0,
       motor: 0.0,
     },
+    current: {
+      in: 0.0,
+      in_total: 0.0,
+    },
     dutyCycle: 0.0,
     erpm: 0.0,
+    speed: 0.0,
     voltage: 0.0,
+    batteryLevel: 0.0,
+    ampHours: {
+      consumed: 0.0,
+      charged: 0.0,
+    },
+    wattHours: {
+      consumed: 0.0,
+      charged: 0.0,
+    },
     tachometer: {
       value: 0.0,
       abs: 0.0,
     },
+    pidPos: 0.0,
     faultCode: 0,
+    controllerId: 0,
+    numVescs: 0,
+    wattHoursLeft: 0.0,
+    odoMeter: 0.0,
   };
 
-  response.temp.mosfet = payload.readDouble16(1e1);
-  response.temp.motor = payload.readDouble16(1e1);
-  response.dutyCycle = payload.readDouble16(1e3);
-  response.erpm = payload.readDouble32(1e0);
-  response.voltage = payload.readDouble16(1e1);
-  response.tachometer.value = payload.readInt32();
-  response.tachometer.abs = payload.readInt32();
-  response.faultCode = payload.readInt8();
-
+  response.bitmask = payload.readDouble32(1e0);
+  const mask = response.bitmask;
+  if (mask & (1 << 0)) {
+    response.temp.mosfet = payload.readDouble16(1e1);
+  }
+  if (mask & (1 << 1)) {
+    response.temp.motor = payload.readDouble16(1e1);
+  }
+  if (mask & (1 << 2)) {
+    response.current.in = payload.readDouble32(1e2);
+  }
+  if (mask & (1 << 3)) {
+    response.current.in_total = payload.readDouble32(1e2);
+  }
+  if (mask & (1 << 4)) {
+    response.dutyCycle = payload.readDouble16(1e3);
+  }
+  if (mask & (1 << 5)) {
+    response.erpm = payload.readDouble32(1e0);
+  }
+  if (mask & (1 << 6)) {
+    response.speed = payload.readDouble32(1e3);
+  }
+  if (mask & (1 << 7)) {
+    response.voltage = payload.readDouble16(1e1);
+  }
+  if (mask & (1 << 8)) {
+    response.batteryLevel = payload.readDouble16(1e3);
+  }
+  if (mask & (1 << 9)) {
+    response.ampHours.consumed = payload.readDouble32(1e4);
+  }
+  if (mask & (1 << 10)) {
+    response.ampHours.charged = payload.readDouble32(1e4);
+  }
+  if (mask & (1 << 11)) {
+    response.wattHours.consumed = payload.readDouble32(1e4);
+  }
+  if (mask & (1 << 12)) {
+    response.wattHours.charged = payload.readDouble32(1e4);
+  }
+  if (mask & (1 << 13)) {
+    response.tachometer.value = payload.readInt32();
+  }
+  if (mask & (1 << 14)) {
+    response.tachometer.abs = payload.readInt32();
+  }
+  if (mask & (1 << 15)) {
+    response.pidPos = payload.readDouble32(1e6);
+  }
+  if (mask & (1 << 16)) {
+    response.faultCode = payload.readInt8();
+  }
   return Promise.resolve(response);
 }
 

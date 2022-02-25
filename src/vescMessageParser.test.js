@@ -1,5 +1,10 @@
-import { packetTypes } from '.';
-import { MESSAGE_FW_VERSION, MESSAGE_GET_DECODED_PPM, MESSAGE_GET_VALUES } from './vesc-messages';
+import { PacketTypes } from '.';
+import {
+  MESSAGE_FW_VERSION,
+  MESSAGE_GET_DECODED_PPM,
+  MESSAGE_GET_VALUES,
+  MESSAGE_GET_VALUES_SETUP_SELECTIVE,
+} from './vesc-messages';
 import VescMessageParser from './vescMessageParser';
 
 describe('The VescMessageParser', () => {
@@ -7,7 +12,7 @@ describe('The VescMessageParser', () => {
     const vescMessageParser = new VescMessageParser();
     const payload = {
       payload: MESSAGE_FW_VERSION.PACKAGE,
-      type: packetTypes.COMM_FW_VERSION,
+      type: PacketTypes.COMM_FW_VERSION,
     };
 
     expect.assertions(4);
@@ -26,7 +31,7 @@ describe('The VescMessageParser', () => {
     const vescMessageParser = new VescMessageParser();
     const payload = {
       payload: MESSAGE_GET_VALUES.PACKAGE,
-      type: packetTypes.COMM_GET_VALUES,
+      type: PacketTypes.COMM_GET_VALUES,
     };
 
     expect.assertions(6);
@@ -43,11 +48,32 @@ describe('The VescMessageParser', () => {
     });
   });
 
+  it('should parse a COMM_GET_VALUES_SETUP_SELECTIVE message', (done) => {
+    const vescMessageParser = new VescMessageParser();
+    const payload = {
+      payload: MESSAGE_GET_VALUES_SETUP_SELECTIVE.PACKAGE,
+      type: PacketTypes.COMM_GET_VALUES_SETUP_SELECTIVE,
+    };
+
+    expect.assertions(6);
+
+    vescMessageParser.queueMessage(payload);
+    vescMessageParser.subscribe((message) => {
+      expect(message.type).toBe('COMM_GET_VALUES_SETUP_SELECTIVE');
+      expect(message.payload.temp.mosfet).toBe(42.3);
+      expect(message.payload.temp.motor).toBe(31.2);
+      expect(message.payload.dutyCycle).toBe(25.6);
+      expect(message.payload.tachometer.value).toBe(65536);
+      expect(message.payload.tachometer.abs).toBe(131072);
+      done();
+    });
+  });
+
   it('should parse a COMM_GET_DECODED_PPM message', (done) => {
     const vescMessageParser = new VescMessageParser();
     const payload = {
       payload: MESSAGE_GET_DECODED_PPM.PACKAGE,
-      type: packetTypes.COMM_GET_DECODED_PPM,
+      type: PacketTypes.COMM_GET_DECODED_PPM,
     };
 
     expect.assertions(3);
