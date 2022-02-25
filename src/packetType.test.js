@@ -1,4 +1,4 @@
-import PacketTypes from './packetType';
+import { PacketTypes } from './packetType';
 
 describe('The packetType', () => {
   it('should be equal to 0 for COMM_FW_VERSION', () => {

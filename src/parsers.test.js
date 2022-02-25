@@ -10,7 +10,7 @@ import {
   getStatus3,
   getStatus4,
   getStatus5,
-  getValuesSelective,
+  getValuesSetupSelective,
   getBalanceData,
   getAppConfiguration,
   getBmsValues,
@@ -24,7 +24,7 @@ import {
   MESSAGE_STATUS_3,
   MESSAGE_STATUS_4,
   MESSAGE_STATUS_5,
-  MESSAGE_GET_VALUES_SELECTIVE,
+  MESSAGE_GET_VALUES_SETUP_SELECTIVE,
   MESSAGE_COMM_GET_IMU_DATA,
   MESSAGE_FW_VERSION,
   MESSAGE_COMM_GET_APPCONF,
@@ -139,10 +139,10 @@ describe('The parser', () => {
     });
   });
 
-  it('should return the valueSelective command', () => {
-    const payload = MESSAGE_GET_VALUES_SELECTIVE.PACKAGE;
+  it('should return the valueSetupSelective command', () => {
+    const payload = MESSAGE_GET_VALUES_SETUP_SELECTIVE.PACKAGE;
     const buffer = new VescBuffer(payload);
-    return getValuesSelective(buffer).then((data) => {
+    return getValuesSetupSelective(buffer).then((data) => {
       expect(data.temp.mosfet).toBe(42.3);
       expect(data.temp.motor).toBe(31.2);
       expect(data.dutyCycle).toBe(25.6);
@@ -151,6 +151,21 @@ describe('The parser', () => {
       expect(data.tachometer.value).toBe(65536);
       expect(data.tachometer.abs).toBe(131072);
       expect(data.faultCode).toBe(1);
+    });
+  });
+
+  it('should return the valueSetupSelective command only with temp', () => {
+    const payload = MESSAGE_GET_VALUES_SETUP_SELECTIVE.PACKAGE_TEMP_ONLY;
+    const buffer = new VescBuffer(payload);
+    return getValuesSetupSelective(buffer).then((data) => {
+      expect(data.temp.mosfet).toBe(42.3);
+      expect(data.temp.motor).toBe(31.2);
+      expect(data.dutyCycle).toBe(0);
+      expect(data.erpm).toBe(0);
+      expect(data.voltage).toBe(0);
+      expect(data.tachometer.value).toBe(0);
+      expect(data.tachometer.abs).toBe(0);
+      expect(data.faultCode).toBe(0);
     });
   });
 
